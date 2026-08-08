@@ -19,9 +19,18 @@ Platform: imx6
 ```
 
 **Device already supported** — `EPD: freescale`, `Lights: tolino`.
-전체 리프레시 제어와 프론트라이트 제어 모두 KOReader가 지원한다. NTX 보드 + i.MX6 SoloLite 조합으로, Kobo·Tolino 기기와 같은 하드웨어 계열이다.
+NTX 보드 + i.MX6 SoloLite 조합으로, Kobo·Tolino 기기와 같은 하드웨어 계열이다.
+**TEST E-INK 실행 시 화면 전체 플래시 확인 — 목록 등재뿐 아니라 실동작까지 검증됨.**
+
+기타: 안드로이드 4.4.2 / 시스템 v9.0.38 / 서점사 예스24 / 내부 저장소 5.86GB / 외부(microSD) 14.83GB.
 
 설치본: `koreader-android-arm-v2026.07.1.apk` (armeabi-v7a). 설치 경로는 크레마 **열린서재 → `+`**.
+
+### 파일 전송 통로
+
+- **Send Anywhere** 로 PC → 크레마 전송. KOReader APK도 이 경로로 설치했다. 앞으로 플러그인 파일도 이 채널을 쓴다.
+- **adb는 사용 불가.** 크레마 설정은 안드로이드 기본 설정 앱이 아닌 자체 화면이라 기기 정보에 빌드 번호 항목이 없고, 개발자 옵션을 켤 수 없다. 루팅 없이는 막혀 있으므로 파고들지 말 것.
+- 맥에 USB로 연결하면 USB 트리에 아예 열거되지 않는다. 윈도우 PC는 인식하지만 노출되는 드라이브가 읽기 전용이라 쓰기 불가.
 
 ## 개발 시 유의사항
 
