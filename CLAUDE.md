@@ -31,7 +31,10 @@
 
 ## 다음 단계
 
-1. e-ink 시계/캘린더 KOReader 플러그인·프로젝트 사례 조사
-2. 플러그인 기능 요구사항 정리 (표시 정보, 갱신 주기, UI 레이아웃)
-3. 카르타G 롬 개발/디버깅 환경 확인 (개발자 옵션, ADB)
-4. KOReader Lua 플러그인 개발 착수
+사례 조사 완료 → [docs/research-koreader-plugins.md](docs/research-koreader-plugins.md). 리스크가 큰 순서로 재정렬됨.
+
+1. **KOReader 설치 + e-ink 호환성 테스트** (Tools → More Tools → Developer options → Start compatibility test) — 리프레시 드라이버 미지원이면 설계가 바뀌므로 최우선
+2. 개발/디버깅 환경 확인 (개발자 옵션, ADB) 및 플러그인 배포 경로 결정
+3. `dtdisplay.koplugin` 실기 구동 — 환경 문제와 우리 코드 문제를 구분할 기준점
+4. 요구사항 확정 (표시 정보, 갱신 주기, 캘린더 소스, 레이아웃)
+5. 플러그인 작성 착수 — `dtdisplay` 구조를 뼈대로
