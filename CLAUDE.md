@@ -8,7 +8,20 @@
 
 - **핵심 산출물**: KOReader용 **Lua 플러그인** (처음부터 직접 작성 — 기존 플러그인 재사용 아님)
 - **타깃 기기**: 크레마 카르타 / 카르타G 롬 / 안드로이드 4.4.2 / 샌디스크 16GB microSD
-- **현재 상태**: 초기 논의 단계. 방향성만 확정, 코드 없음.
+- **현재 상태**: KOReader 설치 및 e-ink 호환성 확인 완료. 플러그인 코드는 아직 없음.
+
+### 기기 정보 (KOReader 호환성 테스트로 확인, 2026-08-08)
+
+```
+Manufacturer: iwg        Brand: crema         Model: crema-0670c
+Device: ntx_6sl          Product: ntx_6sl     Hardware: e60qg0
+Platform: imx6
+```
+
+**Device already supported** — `EPD: freescale`, `Lights: tolino`.
+전체 리프레시 제어와 프론트라이트 제어 모두 KOReader가 지원한다. NTX 보드 + i.MX6 SoloLite 조합으로, Kobo·Tolino 기기와 같은 하드웨어 계열이다.
+
+설치본: `koreader-android-arm-v2026.07.1.apk` (armeabi-v7a). 설치 경로는 크레마 **열린서재 → `+`**.
 
 ## 개발 시 유의사항
 
