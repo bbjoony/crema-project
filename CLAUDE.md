@@ -20,6 +20,15 @@
 - **개인** 토이 프로젝트. 코드는 개인 GitHub 계정 `bbjoony`에 저장.
 - 업무용 계정과 **분리 관리**. 이 저장소의 로컬 git 신원은 `bbjoony`로 설정되어 있음 — 커밋에 업무용 이메일이 섞이지 않도록 유지할 것.
 
+## 작업 방식
+
+이 저장소는 **Public** 입니다. Claude Desktop은 GitHub 커넥터 없이 raw URL을 직접 읽습니다 (커넥터 연동은 2026-08-08 시도 후 폐기).
+
+| 도구 | 역할 | 접근 방식 |
+|------|------|-----------|
+| Claude Desktop | 설계 논의, 사례 조사, 요구사항 정리 | `raw.githubusercontent.com/bbjoony/crema-project/main/...` 웹 fetch |
+| Claude Code | 파일 작성, 커밋, 실제 개발 | 로컬 클론 `~/crema-project` 직접 |
+
 ## 다음 단계
 
 1. e-ink 시계/캘린더 KOReader 플러그인·프로젝트 사례 조사
