@@ -65,8 +65,29 @@ end
 설정(톱니) → Screen timeout → "Keep screen on"
 ```
 
-단 같은 파일에 `if needs_wakelocks then return false end` 분기가 있어, 구형 기기에서는
-이 메뉴가 비활성화된다. **카르타(안드로이드 4.4.2)에서 선택 가능한지 실기 확인 필요.**
+**→ 카르타에서 선택 가능함을 확인하고 활성화했다 (2026-08-10).** 즉
+`android.needsWakelocks()` 가 카르타에서 거짓이며, `AKEEP_SCREEN_ON_ENABLED` 를 쓸 수 있다.
+`WRITE_SETTINGS` 권한도 불필요하다 — `canModifyTimeout` 이 `system`/`screenOn` 두 값에
+대해서는 권한 검사를 우회한다:
+
+```lua
+local function canModifyTimeout(timeout)
+    if needs_wakelocks then return false end
+    if timeout == system or timeout == screenOn then
+        return true                                    -- ← 권한 검사 없이 통과
+    else
+        return android.settings.hasPermission("settings")
+    end
+end
+```
+
+**상시 표시의 전제가 성립했다.** 플러그인 코드로 wake lock 을 구현할 필요가 없고,
+`_pauseAutoSuspend()` 는 카르타에서 그냥 no-op 으로 두면 된다 (이 설정이 대신한다).
+
+남은 확인은 **실제 지속성과 전력**이다. 화면을 계속 켜두면 CPU 가 잠들지 않아 소모가
+크다. digitalclock README 의 "일주일" 은 Kobo 기준이며 카르타에는 적용되지 않을 것이다.
+상시 표시 용도라면 **USB 전원 연결이 현실적인 전제**다 — USB 데이터는 안 되지만
+충전은 되므로 문제없다.
 
 **기타 주의:**
 

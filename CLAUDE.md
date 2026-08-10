@@ -178,7 +178,7 @@ mkdir -p /tmp/luacheck && cd /tmp/luacheck && npm i luaparse
 1. ~~**KOReader 설치 + e-ink 호환성 테스트**~~ — 완료 (2026-08-08). Device already supported
 2. ~~개발/디버깅 환경 확인 및 플러그인 배포 경로 결정~~ — 완료 (2026-08-10). adb 불가 확정, 배포 경로 확정
 3. ~~**canary 실기 구동**~~ — 완료 (2026-08-10). 로드·화면 로그 채널 모두 성공. 위 Lua 실행 환경 절 참조
-4. **안드로이드 절전 억제 가능 여부 확인** ← 현재 여기. **프로젝트 최대 리스크.** 상시 표시가 안 되면 설계 자체가 바뀐다. `설정 → Screen timeout → Keep screen on` 이 선택 가능한지부터 확인
-5. `digitalclock.koplugin` 재사용 여부 결정 — [docs/research-koreader-plugins.md](docs/research-koreader-plugins.md) 참조
+4. ~~**안드로이드 절전 억제 확인**~~ — **해소 (2026-08-10).** `설정 → Screen timeout → Keep screen on` 선택 가능, 활성화 완료. `needsWakelocks()` 가 거짓이고 `WRITE_SETTINGS` 권한도 불필요. **상시 표시 전제 성립.** 플러그인에서 wake lock 을 구현할 필요 없음
+5. `digitalclock.koplugin` 재사용 여부 결정 ← 현재 여기. [docs/research-koreader-plugins.md](docs/research-koreader-plugins.md) 의 1-b 절 참조. AGPL-3.0 승계 문제가 걸려 있음
 4. 요구사항 확정 (표시 정보, 갱신 주기, 캘린더 소스, 레이아웃)
 5. 플러그인 작성 착수 — `dtdisplay` 구조를 뼈대로
