@@ -81,7 +81,59 @@ KOReader 쪽 경로: `Tools(렌치) → More tools → Developer options`.
 ## 개발 시 유의사항
 
 - 타깃이 **안드로이드 4.4.2 (KitKat)** 로 매우 구형이다. 최신 API·툴체인 가정 금지. KOReader 및 Lua 환경 제약을 항상 고려할 것.
-- **디버깅 수단이 제한적이다.** adb 로그캣을 못 쓰므로 플러그인 오류는 기기 화면에 뜨는 것만 보고 판단해야 한다. 실패 시 원인 범위를 좁히기 어렵기 때문에, 코드를 크게 쓰지 말고 **작은 단위로 올려 확인하며 키워 나갈 것.**
+
+### 디버깅 수단 — 화면 표시가 유일하다 (2026-08-10 확인)
+
+**읽을 수 있는 로그가 없다.** 확인한 경로를 모두 적어둔다. 다시 시도하지 말 것:
+
+| 경로 | 결과 |
+|---|---|
+| adb logcat | adb 자체가 불가 |
+| `koreader/crash.log` | **안드로이드 빌드는 생성하지 않음.** 아래 설명 참조 |
+| 서드파티 logcat 앱 | 안드로이드 4.1+ 는 `READ_LOGS` 가 시스템 앱 전용. 루팅 필요 |
+| Developer options 의 로그 덤프 | 해당 항목 없음 (`디버그 로깅`, `C 블리터 비활성` 두 개뿐) |
+
+`crash.log` 는 이름과 달리 크래시 전용이 아니라 stdout/stderr 전체 로그다. 다만 그건
+셸 스크립트로 실행되는 플랫폼(데스크톱·Kobo·Kindle) 얘기고, **안드로이드는 자바
+런처(`org.koreader.launcher`)로 뜨기 때문에 리다이렉트 대상이 없어 파일이 안 생긴다.**
+로그는 logcat 으로만 나간다. Developer options 의 `디버그 로깅` 을 켜도 읽을 수 없다.
+
+**그래서 로그 채널을 코드 안에 직접 만든다.** 위험한 작업은 `pcall` 로 감싸고 실패 시
+`InfoMessage` 로 화면에 띄운다 (`cremaclock.koplugin/main.lua` 의 `notify`/`guard` 참조).
+
+이 방식의 한계가 작업 방식을 규정한다 — **플러그인이 로드 자체에 실패하면 그 코드도
+안 돌아가고, 신호는 "메뉴에 항목이 안 뜬다" 하나로 뭉개진다.** 따라서:
+
+- `init()` 과 메뉴 등록 경로에는 실패할 여지가 있는 호출을 두지 않는다
+- 위험한 일은 전부 콜백 안쪽 `pcall` 로 밀어넣는다
+- 기기 왕복(Send Anywhere → 수동 복사 → 재시작)이 비싸므로 한 번에 최대한 많이 확인한다
+- 코드를 크게 쓰지 말고 **작은 단위로 올려 확인하며 키워 나갈 것**
+
+### C 블리터 비활성
+
+`Developer options` 에 있지만 **켜지 말 것.** 화면 그리기를 C 대신 Lua 로 떨어뜨리는
+렌더링 폴백이다. 카르타는 `EPD: freescale` 로 정상 지원되므로 불필요하고, 켜면 e-ink
+갱신이 느려져 갱신 성능을 오판하게 된다. 화면 깨짐이 실제로 발생하면 그때 쓸 카드.
+
+## 저장소 구조
+
+```
+plugins/cremaclock.koplugin/   ← 기기의 koreader/plugins/ 에 그대로 복사되는 단위
+    _meta.lua                  플러그인 메타데이터
+    main.lua                   WidgetContainer 구현
+docs/                          조사·설계 문서
+```
+
+`plugins/` 아래 디렉터리 구조는 **기기 배치와 1:1로 일치시킨다.** 폴더 이름 규칙은
+`<이름>.koplugin` 이며 이 규칙을 벗어나면 KOReader 가 스캔하지 않는다.
+
+로컬에 Lua 런타임이 없다. 구문 검증은 Node + `luaparse` 로 한다 (brew 는 Xcode
+라이선스 동의가 막혀 있음):
+
+```sh
+mkdir -p /tmp/luacheck && cd /tmp/luacheck && npm i luaparse
+# luaVersion '5.1' 로 파싱 — KOReader 는 LuaJIT(5.1 문법) 기반
+```
 
 ## 저장소 / 계정
 
@@ -103,6 +155,6 @@ KOReader 쪽 경로: `Tools(렌치) → More tools → Developer options`.
 
 1. ~~**KOReader 설치 + e-ink 호환성 테스트**~~ — 완료 (2026-08-08). Device already supported
 2. ~~개발/디버깅 환경 확인 및 플러그인 배포 경로 결정~~ — 완료 (2026-08-10). adb 불가 확정, 배포 경로 확정
-3. **최소 플러그인 1개 실기 구동** — 메뉴에 항목만 띄우는 수준의 canary. 배포 경로와 플러그인 로딩이 실제로 도는지 확인하는 기준점 (`dtdisplay.koplugin` 는 그다음)
+3. **canary 실기 구동** ← 현재 여기. `plugins/cremaclock.koplugin` 작성·구문검증 완료, 기기 투입 대기. 메뉴 항목이 뜨는지(로드 검증) + 콜백이 환경 정보를 띄우는지(화면 로그 채널 검증)
 4. 요구사항 확정 (표시 정보, 갱신 주기, 캘린더 소스, 레이아웃)
 5. 플러그인 작성 착수 — `dtdisplay` 구조를 뼈대로
