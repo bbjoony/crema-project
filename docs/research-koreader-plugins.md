@@ -23,7 +23,62 @@
 - KOReader 2023.03 "Cherry Blossom"에서 테스트됨 (Kobo Clara 2E, Linux x86 AppImage)
 - **날짜/캘린더는 없고 시계+요일만** 표시 → 캘린더는 우리가 직접 얹어야 하는 부분
 
-이 프로젝트의 출발점으로 가장 적합하다.
+→ **아래 1-b 로 대체.** `digitalclock.koplugin` 이 더 최신이고 완성도가 높다.
+
+### 1-b. digitalclock.koplugin — 전체화면 시계 (온디바이스) ★ 유력 베이스
+
+- 저장소: <https://github.com/DucNg/digitalclock.koplugin> (**AGPL-3.0**, ★26, 2026-06 갱신)
+- 구성: `_meta.lua`, `main.lua` 293줄 — dtdisplay 보다 파일이 적고 최근까지 유지보수됨
+- 진입: Tools → More tools → Digital clock. 탭하면 종료. `Dispatcher` 액션도 등록
+
+**그대로 가져올 수 있는 것:**
+
+| 기능 | 구현 |
+|---|---|
+| 시각/날짜 | 170pt 대형 폰트 + 로케일 인식 날짜 (한국어 대응) |
+| **분 경계 정렬** | `UIManager:scheduleIn(61 - os.date("%S"), ...)` — 정각에 갱신 |
+| **e-ink 부분 갱신** | 최초 `UIManager:show(self, "full")`, 이후 `setDirty(self, "ui", self.time_dimen)` |
+| 배터리 감시 | 2시간 주기, 20% 미만 시 InfoMessage 경고 |
+
+부분 갱신 전략이 특히 값지다. 아래 "리프레시 드라이버" 절의 잔상 누적 우려에 대한
+실제 답 — **시각 영역만 `Geom` 으로 지정해 갱신 범위를 좁힌다.**
+
+**카르타에서 안 되는 것 — 하필 핵심 기능이다:**
+
+```lua
+function DigitalClock:_pauseAutoSuspend()
+    if Device:isCervantes() or Device:isKobo() then ...
+    elseif Device:isKindle() then ...
+    else logger.warn("pause suspend not supported on this device") end  -- ← 카르타
+end
+```
+
+카르타는 하드웨어가 Kobo 계열이어도 **OS 가 안드로이드**라 이 분기를 통과하지 못한다.
+즉 README 가 내세우는 "일주일 상시 표시"가 우리에게는 빠진다. **상시 표시가 이 프로젝트의
+목적 자체이므로, 이것이 현재 최대 리스크다.**
+
+해결은 플러그인이 아니라 KOReader 본체 쪽에 있을 수 있다 — 안드로이드 빌드에
+화면 계속 켜기 설정이 내장돼 있다
+([timeout_android.lua](https://github.com/koreader/koreader/blob/master/frontend/ui/elements/timeout_android.lua)):
+
+```
+설정(톱니) → Screen timeout → "Keep screen on"
+```
+
+단 같은 파일에 `if needs_wakelocks then return false end` 분기가 있어, 구형 기기에서는
+이 메뉴가 비활성화된다. **카르타(안드로이드 4.4.2)에서 선택 가능한지 실기 확인 필요.**
+
+**기타 주의:**
+
+- `PLUGIN_ROOT = "plugins/digitalclock.koplugin/"` 상대 경로 — 안드로이드는 CWD 가
+  외부 저장소가 아니므로 사용자 이미지 기능은 동작하지 않고 기본 로고로 폴백할 것이다
+- `logger.dbg` 를 쓰는데 안드로이드에서는 logcat 으로 나가 **읽을 수 없다.** 우리
+  화면 로그 채널로 바꿔야 한다
+- 클래스 정의에 구형 `InputContainer:new{}` 관용구를 쓴다. canary 로 확인한
+  `:extend{}` 가 현행 방식
+- `is_charging`, `batt_lvl` 등이 `local` 없이 전역으로 새는 곳이 있다
+- **AGPL-3.0 이므로 파생물도 AGPL-3.0 + 출처 표기 필요.** 현재 크레마 저장소에는
+  라이선스 파일이 없으므로 추가해야 한다
 
 ### 2. calendar.koplugin — iCal 캘린더 (온디바이스)
 
@@ -140,6 +195,24 @@ UIManager:setDirty("all", "ui", self.datetime_vertical_group.dimen)    -- 이후
 - **Auto suspend timeout** 비활성화 (Settings → Device)
 - 커스텀 wake 로직 대신 위 설정에 위임하는 것이 선례
 
+> **주의 — 위 선례는 카르타에 그대로 적용되지 않는다 (2026-08-10 소스 확인).**
+>
+> KOReader 본체의 `keepalive.koplugin` 도 `digitalclock.koplugin` 과 똑같이
+> Cervantes/Kobo/Kindle/SDL 만 분기하고 **안드로이드 분기가 없다.** trmnl 이 안내하는
+> Keep alive 경로는 Kobo 기준이며 우리에게는 무효다.
+>
+> ```lua
+> if Device:isCervantes() or Device:isKobo() then ...
+> elseif Device:isKindle() then ...
+> elseif Device:isSDL() then ...
+> -- 안드로이드 분기 없음
+> ```
+>
+> 안드로이드에서 절전을 막는 경로는 `PluginShare.pause_auto_suspend` 가 아니라
+> **`timeout_android.lua` 의 `AKEEP_SCREEN_ON_ENABLED`** 뿐이다. 안드로이드의 절전은
+> OS 가 관리하므로 KOReader 내부 플래그로는 손댈 수 없고, 시스템 설정이나 wake lock 이
+>필요하다. 따라서 `설정 → Screen timeout → Keep screen on` 이 **유일한 후보**다.
+
 ## 카르타 고유 리스크
 
 ### 1. 안드로이드 4.4.2 — 문제없음 (확인됨)
@@ -185,13 +258,17 @@ F-Droid 기준 **최신 v2026.07.1(2026-08-03)도 "requires Android 4.3 or newer
 
 1. ~~**KOReader 설치 및 e-ink 호환성 테스트**~~ — 완료 (2026-08-08)
 2. ~~**개발 환경 확인**~~ — 완료 (2026-08-10). ADB 불가, 배포는 KOReader 파일 브라우저
-3. **최소 플러그인(canary) 실기 구동** — 메뉴 항목만 띄우는 수준을 먼저 올려 배포 경로와 플러그인 로딩 자체를 검증한다. 로그캣이 없으므로 이 기준점 없이 큰 코드를 올리면 원인 추적이 불가능하다. 통과 후 **dtdisplay 실기 구동**으로 넘어간다
-4. **요구사항 확정** — 표시 정보(시각/날짜/일정), 갱신 주기, 캘린더 소스(로컬 하드코딩 vs iCal), 레이아웃
-5. **플러그인 작성 착수** — dtdisplay 구조를 뼈대로 시작
+3. ~~**최소 플러그인(canary) 실기 구동**~~ — 완료 (2026-08-10). 로드·화면 로그 채널 모두 성공. Lua 5.1 / v2026.07.1 / `os.date` 로컬 시각 정상
+4. **안드로이드 절전 억제 확인** ← **최대 리스크.** `설정 → Screen timeout → Keep screen on` 이 선택 가능한지. 막히면 상시 표시가 불가능해 요구사항 자체를 재설계해야 한다. 코드 작성보다 먼저다
+5. **digitalclock.koplugin 재사용 결정** — 위 1-b 절 참조. UI·갱신 전략은 얻고, 절전 억제와 캘린더는 직접 구현
+6. **요구사항 확정** — 표시 정보(시각/날짜/일정), 갱신 주기, 캘린더 소스(로컬 하드코딩 vs iCal), 레이아웃
+7. **플러그인 작성 착수** — digitalclock 구조를 뼈대로 시작
 
 ## 출처
 
+- [DucNg/digitalclock.koplugin](https://github.com/DucNg/digitalclock.koplugin) — 유력 베이스 (AGPL-3.0)
 - [kktse/dtdisplay.koplugin](https://github.com/kktse/dtdisplay.koplugin)
+- [KOReader timeout_android.lua](https://github.com/koreader/koreader/blob/master/frontend/ui/elements/timeout_android.lua) — 안드로이드 화면 계속 켜기 / needsWakelocks 분기
 - [omer-faruq/calendar.koplugin](https://github.com/omer-faruq/calendar.koplugin) / [MobileRead 소개 스레드](https://www.mobileread.com/forums/showthread.php?t=374361)
 - [paulakfleck/kobo-dashboard](https://github.com/paulakfleck/kobo-dashboard)
 - [usetrmnl/trmnl-koreader](https://github.com/usetrmnl/trmnl-koreader)
