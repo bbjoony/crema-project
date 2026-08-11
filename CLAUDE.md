@@ -48,6 +48,51 @@ time:     2026-08-10 23:30:34  (기기 로컬 시각과 일치)
 
 설치본: `koreader-android-arm-v2026.07.1.apk` (armeabi-v7a). 설치 경로는 크레마 **열린서재 → `+`**.
 
+#### CWD 와 상대 경로 — 상대 경로를 쓰지 말 것 (2026-08-11 실측)
+
+```
+cwd:               /data/data/org.koreader.launcher/files   ← 앱 전용 디렉터리
+resources/koreader.svg           → opens                    ← KOReader 에셋이 여기 풀려 있음
+plugins/cremaclock.koplugin/...  → MISSING                  ← 사용자 플러그인은 외부 저장소
+```
+
+**CWD 는 `datadir` 이 아니다.** KOReader 본체 에셋은 CWD 아래에 풀려 있어 상대 경로로
+열리지만, 우리 플러그인이 놓인 `/storage/emulated/0/koreader/plugins/` 는 CWD 기준
+상대 경로로 **닿지 않는다.** 확실히 설치돼 있는 `cremaclock` 자신을 기준점으로 열어봐서
+확인한 값이다.
+
+→ **플러그인 코드에서 파일을 열 때는 상대 경로를 쓰지 않는다.**
+`require("datastorage"):getDataDir()` 로 절대 경로를 만들 것.
+
+#### 화면 (2026-08-11 실측)
+
+```
+screen: 1072x1448    dpi: 300    touch: true    keys: true
+battery: true        aux battery: false
+```
+
+6인치 300ppi 패널. 텍스트 실측 높이 — `Font:getFace("cfont", n)` 기준:
+
+| 크기 | 내용 | 높이 |
+|---|---|---|
+| 170pt | `00:00` | 423px |
+| 40pt | `Tuesday August 11 2026` | 107px |
+
+**폭은 아직 안 쟀다.** 세로 1448 은 넉넉하지만 가로 1072 가 더 빡빡한 쪽이므로,
+대형 폰트를 쓸 때는 폭을 먼저 확인할 것.
+
+#### 로케일 — `os.date` 는 영어로 나온다 (2026-08-11 실측)
+
+기기 UI 가 한국어여도 `os.date("%a")` = `Tue`, `os.date("%B")` = `August` 로 **영어**다.
+`datetime` 모듈의 번역 테이블이 이걸 키로 받아 한국어를 돌려준다:
+
+```
+datetime.shortDayOfWeekToLongTranslation["Tue"]  → 화요일
+datetime.longMonthTranslation["August"]          → 8월
+```
+
+즉 **날짜를 한글로 뽑으려면 `os.date` 결과를 직접 쓰지 말고 이 번역 테이블을 거친다.**
+
 ### 파일 전송 통로
 
 - **Send Anywhere** 로 PC → 크레마 전송. KOReader APK도 이 경로로 설치했다. 앞으로 플러그인 파일도 이 채널을 쓴다.
@@ -179,8 +224,8 @@ mkdir -p /tmp/luacheck && cd /tmp/luacheck && npm i luaparse
 2. ~~개발/디버깅 환경 확인 및 플러그인 배포 경로 결정~~ — 완료 (2026-08-10). adb 불가 확정, 배포 경로 확정
 3. ~~**canary 실기 구동**~~ — 완료 (2026-08-10). 로드·화면 로그 채널 모두 성공. 위 Lua 실행 환경 절 참조
 4. ~~**안드로이드 절전 억제 확인**~~ — **해소 (2026-08-10).** `설정 → Screen timeout → Keep screen on` 선택 가능, 활성화 완료. `needsWakelocks()` 가 거짓이고 `WRITE_SETTINGS` 권한도 불필요. **상시 표시 전제 성립.** 플러그인에서 wake lock 을 구현할 필요 없음
-5. **digitalclock 사전 점검 프로브 작성** — 완료 (2026-08-11). 아래 절 참조. **실기 실행 대기 중**
-6. digitalclock 을 수정 없이 설치해 실측 → 그 결과로 A / B 결정
+5. ~~**digitalclock 사전 점검**~~ — **완료 (2026-08-11). 통과.** 우려했던 두 함정이 모두 비껴갔다. 아래 절 참조
+6. digitalclock 을 수정 없이 설치해 실측 ← **다음 할 일** → 그 결과로 A / B 결정
 7. 요구사항 확정 (표시 정보, 갱신 주기, 캘린더 소스, 레이아웃) → 플러그인 작성 착수
 
 ### digitalclock 재사용 범위 — C안 진행 중 (2026-08-11)
@@ -212,17 +257,25 @@ digitalclock 은 **남의 코드라 `pcall` 로 감쌀 수 없다.** 로드에 �
 | 화면·레이아웃 | 해상도·DPI·터치·배터리 API, 170pt/40pt 텍스트 실측 높이 |
 | 배터리 스냅샷 | 상시 표시 소모율 실측용. 시작·종료 시각과 잔량을 짝지어 기록 |
 
-특히 의심스러운 두 가지 (원본 소스로 2026-08-11 확인):
+**결과 (2026-08-11 실기): 통과.** 의심했던 두 가지가 모두 비껴갔다.
 
-- `require("frontend/datetime")` — KOReader 는 `package.path` 에 `frontend/` 를 이미
-  넣으므로 보통 접두사 없이 쓴다. 이 형태가 안드로이드 빌드에서 풀리는지 미확인
-- `datetime.shortDayOfWeekToLongTranslation[os.date("%a")]` 와 `longMonthTranslation[os.date("%B")]`
-  — 기기 로케일이 한국어라 `%a`/`%B` 가 영어 약어 키와 어긋나면 `nil` 이 템플릿으로 넘어가
-  **표시 시점에** 죽는다. 로드는 되는데 탭하면 죽는 형태라 원인 짚기가 특히 어렵다
+| 우려 | 실측 | 판정 |
+|---|---|---|
+| `require("frontend/datetime")` — `frontend/` 접두사가 안 풀리면 **로드 자체가 실패** | `table` | 통과 |
+| `%a`/`%B` 가 한국어로 나오면 번역 조회가 `nil` → **탭하면 죽음** | `Tue`/`August` → `화요일`/`8월` | 통과 |
 
-상대 경로 프로브에는 기준점을 같이 둔다 — `cremaclock` 자기 자신을 상대 경로로 열어
-본다. 이건 지금 확실히 설치돼 있으므로, 이게 `MISSING` 이면 원인은 CWD 하나뿐이다.
-digitalclock 쪽 `MISSING` 을 "CWD 가 틀림" 과 "아직 설치 안 함" 으로 가르는 장치다.
+나머지 `require` 4종(`datetime`, `pluginshare`, `dispatcher`, `imagewidget`)도 전부 `table`.
+
+`PLUGIN_ROOT: MISSING` 은 유일한 실패지만 **예상대로이고 무해하다.** 기준점을 같이 둔
+덕에 원인이 정확히 갈린다 — `self via relpath` 도 `MISSING` 인데 `fallback logo` 는
+`opens` 이므로, "digitalclock 이 아직 없어서"가 아니라 "CWD 가 앱 전용 디렉터리라
+외부 저장소에 닿지 않아서"다 (위 CWD 절 참조). **사용자 이미지 기능은 못 쓰고 기본
+로고로 폴백하는데, 그 폴백 경로는 열리므로 죽지 않는다.**
+
+남은 불확실성 하나: digitalclock 이 이미지 존재를 **어떻게** 확인하는지는 원본에서
+확답을 못 얻었다. 프로브는 `io.open` 으로 대신 쟀는데, 걔가 `lfs` 를 쓰거나 확인 없이
+`ImageWidget` 에 넘긴다면 폴백이 아니라 에러로 갈 수 있다. 폴백 경로를 따로 둔 걸 보면
+확인을 할 것으로 보이고, 확인 방법은 그냥 설치해보는 것이다 — C안이 원래 그런 것이다.
 
 어느 안이든 공통으로 해야 하는 일:
 
