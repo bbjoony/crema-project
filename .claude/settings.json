@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh auth status:*)",
+      "Bash(gh repo view:*)",
+      "Bash(git config user.email)",
+      "Bash(git config user.name)",
+      "Bash(git config --list:*)",
+      "Bash(git config --local --list:*)",
+      "Bash(git config --global --list:*)",
+      "Bash(git config --get-all:*)",
+      "Bash(system_profiler:*)",
+      "Bash(ioreg:*)",
+      "Bash(defaults read:*)"
+    ]
+  }
+}
