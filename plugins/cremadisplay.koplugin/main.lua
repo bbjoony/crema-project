@@ -27,6 +27,9 @@ Crema Display — 크레마 카르타 상시 표시용 시계.
    본체 설정 `Screen timeout → Keep screen on` 이 그 역할을 대신한다.
 7. 식별자·메뉴 키를 `crema_display` 로 바꿨다. 원본을 기기에 남겨둔 채 이걸 설치해도
    메뉴 항목과 Dispatcher 액션이 충돌하지 않는다.
+8. **날짜 갱신을 정확한 자정에.** 원본 `_getNextDateRefreshInSeconds()` 는 시(hour)만
+   보고 분·초를 버려서 날짜가 최대 59분 늦게 바뀐다. 상시 표시용이라 자정을 넘기는
+   것이 정상 동작이므로 매일 눈에 띈다.
 ]]
 
 local _ = require("gettext")
@@ -123,8 +126,13 @@ function CremaDisplay:_getFileName()
     return "resources/koreader.svg"
 end
 
+--- 다음 자정까지 남은 초. 자정이 지난 1초 뒤에 깨어난다.
+-- 원본은 `(24 - %H) * 3600` 으로 시(hour)만 보고 분·초를 버렸다. 23시 30분에 켜면
+-- 3600초 뒤인 **00시 30분**에야 날짜가 바뀐다 — 최대 59분 늦는다.
 function CremaDisplay:_getNextDateRefreshInSeconds()
-    return (24 - tonumber(os.date("%H"))) * 3600
+    local now = os.date("*t")
+
+    return 86400 - (now.hour * 3600 + now.min * 60 + now.sec) + 1
 end
 
 function CremaDisplay:addToMainMenu(menu_items)
