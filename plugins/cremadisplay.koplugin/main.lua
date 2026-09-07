@@ -30,6 +30,9 @@ Crema Display — 크레마 카르타 상시 표시용 시계.
 8. **날짜 갱신을 정확한 자정에.** 원본 `_getNextDateRefreshInSeconds()` 는 시(hour)만
    보고 분·초를 버려서 날짜가 최대 59분 늦게 바뀐다. 상시 표시용이라 자정을 넘기는
    것이 정상 동작이므로 매일 눈에 띈다.
+9. **재개 시 스케줄 중복 방지.** 원본 `onResume` 은 갱신 함수를 바로 호출하는데, 그
+   함수들이 내부에서 다시 `scheduleIn` 을 걸기 때문에 예약이 살아 있는 상태로 재개하면
+   스케줄이 한 겹씩 누적된다. 상시 표시용은 재개를 여러 번 겪으므로 방어해 둔다.
 ]]
 
 local _ = require("gettext")
@@ -248,6 +251,13 @@ function CremaDisplay:setupAutoRefreshTime()
         UIManager:unschedule(self.autoRefreshDate)
     end
     self.onResume = function()
+        -- 두 갱신 함수는 내부에서 다시 scheduleIn 을 걸기 때문에, 이미 예약이 살아
+        -- 있는 상태에서 호출하면 스케줄이 한 겹 더 쌓인다. `onSuspend` 없이
+        -- `onResume` 만 도달하는 흐름에서 재개할 때마다 누적되므로, 흐름에 기대지
+        -- 않고 여기서 먼저 걷어낸다.
+        UIManager:unschedule(self.autoRefreshTime)
+        UIManager:unschedule(self.autoRefreshDate)
+
         self.autoRefreshTime()
         self.autoRefreshDate()
     end
