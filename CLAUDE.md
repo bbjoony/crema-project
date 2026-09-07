@@ -203,6 +203,7 @@ plugins/cremaclock.koplugin/   ← 프로브 전용. 시계 기능 없음
     _meta.lua
     main.lua                   환경·의존성·레이아웃·배터리 프로브
 docs/                          조사·설계 문서
+    images/                    README 에 싣는 사진. cremadisplay-running.jpg 는 실기 구동 화면
 ```
 
 두 플러그인은 **역할이 다르므로 둘 다 유지한다.** `cremadisplay` 가 산출물이고,
